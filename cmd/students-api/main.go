@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/Satvikmpatil/Student-Management-REST-API-Fast-Scalable/internal/config"
 	"github.com/Satvikmpatil/Student-Management-REST-API-Fast-Scalable/internal/http/handlier/student"
+	"github.com/Satvikmpatil/Student-Management-REST-API-Fast-Scalable/internal/storage/sqlite"
 )
 
 func main() {
@@ -20,18 +20,26 @@ func main() {
 	cfg := config.MustLoad()
 
 	//database setup
+	storage, errr:=sqlite.New(cfg)
+
+	if errr != nil{
+		log.Fatal(errr)
+	}
+
+	slog.Info("Storage Done",slog.String("env",cfg.Env))
+
 
 	//setup router
 	router := http.NewServeMux()
-	router.HandleFunc("POST /api/students", student.New())
+	router.HandleFunc("POST /api/students", student.New(storage))
+	router.HandleFunc("GET /api/students/{id}",student.GetById(storage))
 
 	//setup server
 	server := http.Server{
 		Addr:    cfg.Addr,
 		Handler: router,
 	}
-	slog.Info("Server Started %s", cfg.Addr)
-	fmt.Printf("Server Started %s", cfg.Addr)
+	slog.Info("Server Started", slog.String("addr", cfg.Addr))
 
 	done := make(chan os.Signal, 1)
 
